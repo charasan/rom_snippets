@@ -1,2 +1,2 @@
-# rom_snippets
-Some very old Rom2.4 snippets I wrote way way back in the days of old (90s)
+# My Old ROM MUD Snippets
+If you float around collecting these kind of things, you might have seen this code sitting in some ROM snippet collections in the dark areas of the web. As long as they kept my header in the files with my email address, I was ok with that. I am, however, the original author, so I am going to put them in my GitHub, so I can look back and remember I once did things like this.
