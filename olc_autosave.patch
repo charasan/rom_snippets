@@ -1,0 +1,61 @@
+diff --git a/update.c b/update.c
+index abcdefg..hijklmn 100644
+--- a/update.c
++++ b/update.c
+@@ -21,6 +21,7 @@ void	weather_update	args( ( void ) );
+ void	char_update	args( ( void ) );
+ void	obj_update	args( ( void ) );
+ void	aggr_update	args( ( void ) );
++void    olcautosave     args( ( void ) );  /* Added function prototype */
+
+ /* used for saving */
+ int	save_number = 0;
+@@ -1369,6 +1370,8 @@ void update_handler( void )
+     if ( --pulse_area     <= 0 )
+     {
+ 	pulse_area	= PULSE_AREA;
++        olcautosave();  /* Added OLC Autosave function call */
++
+ 	area_update	( );
+     }
+
+@@ -1480,6 +1483,41 @@ void aggr_update( void )
+     return;
+ }
+
++/* OLC Autosave function */
++void olcautosave( void )
++{
++   AREA_DATA *pArea;
++   DESCRIPTOR_DATA *d;
++   char buf[MAX_INPUT_LENGTH];
++
++   /* If adding areas manually, remove the next line - Chance */
++   save_area_list();
++
++   for ( d = descriptor_list; d != NULL; d = d->next )
++   {
++       if ( d->editor )
++           send_to_char( "OLC Autosaving:\n\r", d->character );
++   }
++
++   sprintf( buf, "None.\n\r" );
++
++   for( pArea = area_first; pArea; pArea = pArea->next ) 
++   {
++       if ( IS_SET(pArea->area_flags, AREA_CHANGED) )
++       {
++           save_area( pArea );
++           sprintf( buf, "%24s - '%s'", pArea->name, pArea->file_name );
++           for ( d = descriptor_list; d != NULL; d = d->next )
++           {
++               if ( d->editor )
++               {
++                   send_to_char( buf, d->character );
++                   send_to_char( "\n\r", d->character );
++               }
++           }   
++           REMOVE_BIT( pArea->area_flags, AREA_CHANGED );
++       }
++   }
++}
