@@ -1,0 +1,147 @@
+--- a/src/act_wiz.c
++++ b/src/act_wiz.c
+@@ -XXX,XX +XXX,XX @@ void do_wiznet( CHAR_DATA *ch, char *argument )
+-void do_wiznet( CHAR_DATA *ch, char *argument )
+-{
+-    int flag;
+-    char buf[MAX_STRING_LENGTH];
+-
+-    if ( argument[0] == '\0' )
+-    {
+-	send_to_char( "Wiznet status:\n\r", ch );
+-	return;
+-    }
+-
+-    if ( !str_prefix( argument, "on" ) )
+-    {
+-	send_to_char( "Welcome to Wiznet!\n\r", ch );
+-	SET_BIT( ch->wiznet, WIZ_ON );
+-	return;
+-    }
+-
+-    if ( !str_prefix( argument, "off" ) )
+-    {
+-	send_to_char( "Signing off of Wiznet.\n\r", ch );
+-	REMOVE_BIT( ch->wiznet, WIZ_ON );
+-	return;
+-    }
+-
+-    /* show wiznet status */
+-    if ( !str_prefix( argument, "show" ) )
+-    {
+-	buf[0] = '\0';
+-
+-	for (flag = 0; wiznet_table[flag].name != NULL; flag++)
+-	{
+-	    if ( wiznet_table[flag].level <= get_trust(ch) )
+-	    {
+-		strcat( buf, wiznet_table[flag].name );
+-		strcat( buf, " " );
+-	    }
+-	}
+-	strcat( buf, "\n\r" );
+-
+-	send_to_char( "Wiznet options available to you are:\n\r", ch );
+-	send_to_char( buf, ch );
+-	return;
+-    }
+-
+-    flag = wiznet_lookup(argument);
+-
+-    if ( flag == -1 || get_trust(ch) < wiznet_table[flag].level)
+-    {
+-	send_to_char( "No such option.\n\r", ch );
+-	return;
+-    }
+-
+-    if ( IS_SET(ch->wiznet,wiznet_table[flag].flag) )
+-    {
+-	sprintf( buf, "You will no longer see %s on wiznet.\n\r",
+-		 wiznet_table[flag].name );
+-	send_to_char( buf, ch );
+-	REMOVE_BIT(ch->wiznet,wiznet_table[flag].flag);
+-	return;
+-    }
+-    else
+-    {
+-	sprintf( buf, "You will now see %s on wiznet.\n\r",
+-		 wiznet_table[flag].name );
+-	send_to_char( buf, ch );
+-	SET_BIT(ch->wiznet,wiznet_table[flag].flag);
+-	return;
+-    }
+-
+-}
++void do_wiznet( CHAR_DATA *ch, char *argument )
++{
++   int flag;
++   int col = 0;
++   char buf[MAX_STRING_LENGTH];
++                
++   if ( argument[0] == '\0' )
++   /* Show wiznet options - just like channel command */
++   {
++        send_to_char("{VWELCOME TO WIZNET!!!\n\r", ch);
++        send_to_char("   Option      Status\n\r",ch);
++        send_to_char("---------------------\n\r",ch);
++        /* list of all wiznet options */
++        buf[0] = '\0';
++        
++        for (flag = 0; wiznet_table[flag].name != NULL; flag++)
++        {
++            if (wiznet_table[flag].level <= get_trust(ch))
++            {
++                sprintf( buf, "%-14s %s\t", wiznet_table[flag].name,
++IS_SET(ch->wiznet,wiznet_table[flag].flag) ? "{RON{V" : "OFF" );
++                send_to_char(buf, ch);   
++                col++;
++                if (col==3)
++                {
++                  send_to_char("\n\r",ch);
++                  col=0;
++                }
++            }
++        }
++        /* To avoid color bleeding */
++        send_to_char("{x",ch);
++        return;
++   }    
++ 
++   if (!str_prefix(argument,"on"))
++   {     
++        send_to_char("{VWelcome to Wiznet!{x\n\r",ch);
++        SET_BIT(ch->wiznet,WIZ_ON);
++        return;
++   }
++                
++   if (!str_prefix(argument,"off"))
++   {
++        send_to_char("{VSigning off of Wiznet.{x\n\r",ch);
++        REMOVE_BIT(ch->wiznet,WIZ_ON);
++        return;
++   }
++        
++   flag = wiznet_lookup(argument);
++        
++   if (flag == -1 || get_trust(ch) < wiznet_table[flag].level) 
++   {
++        send_to_char("{VNo such option.{x\n\r",ch);
++        return;
++   }
++   if (IS_SET(ch->wiznet,wiznet_table[flag].flag))
++   {
++        sprintf(buf,"{VYou will no longer see %s on wiznet.{x\n\r",
++                wiznet_table[flag].name);
++        send_to_char(buf,ch);
++        REMOVE_BIT(ch->wiznet,wiznet_table[flag].flag);
++        return;
++   }
++   else  
++   {
++        sprintf(buf,"{VYou will now see %s on wiznet.{x\n\r",
++                wiznet_table[flag].name);
++        send_to_char(buf,ch);
++        SET_BIT(ch->wiznet,wiznet_table[flag].flag);
++        return;
++   }
++}
