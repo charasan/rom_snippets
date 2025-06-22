@@ -1,0 +1,208 @@
+
+
+/* Another snippet by Charasan.  Again, all I ask is that you email me at charasan@gmail.com
+ * and let me know that you're using it.  No credits necessary, and if you make any improvements
+ * to this or any other snippet of mine, by all means, feel free to let me know! <G>  Enjoy!
+ */
+
+
+/* This donate code inspired by the donation system on Aardwolf (wolf.mudservices.com 4000) */
+
+You'll need to make the changes to the following files :
+
+****merc.h****
+Add the following definitions underneath the ROOM_VNUM_XXXXX definitions,
+Also, BE SURE TO CREATE THESE ROOMS BEFORE RECOMPILING AND TRYING!!  Could be messy otherwise.<G> :
+
++ #define ROOM_DONATION_WEAPON  xxxx //(vnum for weapons donation room)
++ #define ROOM_DONATION_ARMOR   xxxx //(vnum for armor donation room )
++ #define ROOM_DONATION_OTHER   xxxx //(vnum for all other donations )
+
+(note : I added an ITEM_DONATED extra flag, to keep people from auctioning donated
+ items on the automated auction channel.  Add the stuff refering to this only if you feel
+ like you need it.  Also, ITEM_DONATED is purposely not added in handler.c, so builders
+ don't use it for new areas.  This should be an in-code usage only flag.  Again, adjust to
+ your own taste.)
+ 
+In the extra flags definitions, add this :
+
++ #define ITEM_DONATED          (R) //or any other available flag
+
+**** act_info.c ****
+
+In the definition for format_obj_to_char, make the following changes :
+
+    static char buf[MAX_STRING_LENGTH];
++    static char buf2[MSL];
+
+    buf[0] = '\0';
++    buf2[0] = '\0';
+
+..............
+
+        if ( obj->short_descr != NULL )
+            strcat( buf, obj->short_descr );
+    }
++       else if (ch->in_room == get_room_index(ROOM_DONATION_WEAPON)
++               || ch->in_room == get_room_index(ROOM_DONATION_ARMOR)
++               || ch->in_room == get_room_index(ROOM_DONATION_OTHER) )
++       {
++               if ( obj->short_descr != NULL )
++               {
+        /* Note that if you don't use color, or use a different color switch, change or omit the { and following letter */
+        /* This change is because most ppl recognize an item's short desc MUCH more than its long, and makes things easier to sort thru
+         * You can omit this part of the change if you want long desc to reign, or if you don't want item levels to show either */
++                       sprintf( buf2, "%s {g[{w%d{g]{x", obj->short_descr, obj->level);
++                       strcat( buf, buf2 );
++               }
++       }
+    else
+
+
+**** act_obj.c ****
+
+Add the following function somewhere in this file :
+
++void do_donate( CHAR_DATA *ch, char *argument )
++{
++    char arg[MAX_INPUT_LENGTH];
++    OBJ_DATA *obj;
++
++    argument = one_argument( argument, arg );
++
++    if ( arg[0] == '\0' )
++    {
++       send_to_char( "Donate what?\n\r", ch );
++       return;
++    }
++
++       if ( ( obj = get_obj_carry( ch, arg, ch ) ) == NULL )
++       {
++           send_to_char( "You do not have that item.\n\r", ch );
++           return;
++       }
++
++       if ( !can_drop_obj( ch, obj ) )
++       {
++           send_to_char( "You can't let go of it.\n\r", ch );
++           return;
++       }
++
++       if (IS_OBJ_STAT(obj,ITEM_ROT_DEATH))
++       {
++               send_to_char( "Only permanent items may be donated.\n\r", ch );
++               return;
++       }
++       
+        /* Again, comment out the next line if you don't want to partake of this feature */
++       SET_BIT( obj->extra_flags, ITEM_DONATED );
++       obj_from_char( obj );
++
++       if (obj->item_type == ITEM_WEAPON)
++               obj_to_room( obj, get_room_index(ROOM_DONATION_WEAPON) );
++
++       else if (obj->item_type == ITEM_ARMOR)
++               obj_to_room( obj, get_room_index(ROOM_DONATION_ARMOR) );
++
++       else
++               obj_to_room( obj, get_room_index(ROOM_DONATION_OTHER) );
++
++       act( "$n donates $p to the needy.", ch, obj, NULL, TO_ROOM );
++       act( "You generously donate $p to the needy.", ch, obj, NULL, TO_CHAR );
++       return;
++}
++
+
+Make this change in the do_drop function :
+
+        send_to_char( "Drop what?\n\r", ch );
+        return;
+    }
+
++       if ( ch->in_room == get_room_index(ROOM_DONATION_WEAPON)
++               || ch->in_room == get_room_index(ROOM_DONATION_ARMOR)
++               || ch->in_room == get_room_index(ROOM_DONATION_OTHER) )
++       {
++               send_to_char( "You can't drop items in this room.  Try donating it.\n\r", ch);
++               return;
++       }
++
+    if ( is_number( arg ) )
+
+Make the following changes to the do_get function :
+
+        else
+        {
+            /* 'get all' or 'get all.obj' */
+            found = FALSE;
++               if (ch->in_room == get_room_index(ROOM_DONATION_WEAPON)
++                       || ch->in_room == get_room_index(ROOM_DONATION_ARMOR)
++                       || ch->in_room == get_room_index(ROOM_DONATION_OTHER) )
++               {
++                       send_to_char("Don't be so greedy!\n\r", ch);
++                       return;
++               }
++
+            for ( obj = ch->in_room->contents; obj != NULL; obj = obj_next )
+
+In get_obj, make the following change :
+
+        act( "$d: you can't carry that much weight.",
+            ch, NULL, obj->name, TO_CHAR );
+        return;
+    }
+
++       if ((ch->in_room == get_room_index(ROOM_DONATION_WEAPON)
++                       || ch->in_room == get_room_index(ROOM_DONATION_ARMOR)
++                       || ch->in_room == get_room_index(ROOM_DONATION_OTHER) )
++                       && get_trust(ch) < obj->level)
++       {
++           send_to_char("You are not powerful enough to use it.\n\r",ch);
++           return;
++       }
++
+    if (!can_loot(ch,obj))
+    {
+
+in do_sacrifice, add the following also :
+
+            "Mota appreciates your offer and may accept it later.\n\r", ch );
+        return;
+    }
+
++       if (ch->in_room == get_room_index(ROOM_DONATION_WEAPON)
++               || ch->in_room == get_room_index(ROOM_DONATION_ARMOR)
++               || ch->in_room == get_room_index(ROOM_DONATION_OTHER) )
++       {
++               send_to_char( "You can't sacrifice items in this room!\n\r", ch);
++               return;
++       }
++
+
+**** interp.c ****
+
+Add this to the tables in interp.c :
+
+     * Object manipulation commands.
+     */
+    { "brandish",       do_brandish,    POS_RESTING,     0,  LOG_NORMAL, 1 },
+    { "close",          do_close,       POS_RESTING,     0,  LOG_NORMAL, 1 },
++    { "donate",                do_donate,      POS_RESTING,     0,      LOG_NORMAL, 1 },
+    { "drink",          do_drink,       POS_RESTING,     0,  LOG_NORMAL, 1 },
+
+**** interp.h ****
+
+And of course, add this line somewhere in interp.h
+
++ DECLARE_DO_FUN(   do_donate       );
+
+**************************************************************************
+Do a clean make and recompile (we did alter header files, after all)
+Worked fine for me on the first try.  Shows what you can do when you're bored on a
+Saturday night. (Some people get lives, some of us code.....go figure ;) )
+
+One suggested use I can think of of the ITEM_DONATED flag that isn't implemented up above would
+be to prevent shopkeepers from buying donated items.  This would prevent people getting rich from selling donated
+items.  Possibly the same with those of you with automated auctions.  Use your imagination! <G>
+
+Enjoy!
